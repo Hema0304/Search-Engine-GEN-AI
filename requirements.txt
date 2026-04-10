@@ -1,0 +1,9 @@
+langchain==0.2.12
+langchain-core==0.2.32
+langchain-community==0.2.10
+langchain-groq
+streamlit
+duckduckgo-search
+wikipedia
+arxiv
+python-dotenv
