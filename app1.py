@@ -45,7 +45,6 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# ---------------- TOOLS ---------------- #
 wiki = WikipediaQueryRun(
     api_wrapper=WikipediaAPIWrapper(top_k_results=1, doc_content_chars_max=300)
 )
@@ -58,7 +57,7 @@ search = DuckDuckGoSearchRun(name="Search")
 
 tools = [search, arxiv, wiki]
 
-# ---------------- UI ---------------- #
+
 st.title("AI Search Assistant (Groq + LangChain)")
 
 api_key = st.sidebar.text_input("Enter Groq API Key", type="password")
@@ -72,7 +71,7 @@ if "messages" not in st.session_state:
 for msg in st.session_state.messages:
     st.chat_message(msg["role"]).write(msg["content"])
 
-# ---------------- CHAT ---------------- #
+
 if prompt := st.chat_input("Ask anything..."):
     st.session_state.messages.append({"role": "user", "content": prompt})
     st.chat_message("user").write(prompt)
