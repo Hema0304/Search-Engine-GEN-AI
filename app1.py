@@ -59,7 +59,7 @@ search = DuckDuckGoSearchRun(name="Search")
 tools = [search, arxiv, wiki]
 
 
-st.title("AI Search Assistant (Groq + LangChain)")
+st.title("Hybrid Semantic Search Engine for Document Retrieval")
 
 api_key = st.sidebar.text_input("Enter Groq API Key", type="password")
 
