@@ -27,11 +27,12 @@ load_dotenv()
 
 from langchain_groq import ChatGroq
 
-llm = ChatGroq(
-    groq_api_key=os.getenv("GROQ_API_KEY"),
-    model_name="llama3-8b-8192"
-)
 
+
+llm = ChatGroq(
+    api_key=st.secrets["GROQ_API_KEY"],
+    model="llama3-8b-8192"
+)
 
 from langchain.agents import AgentExecutor, create_tool_calling_agent
 #Core of decision-making system
