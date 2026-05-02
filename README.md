@@ -2,9 +2,6 @@
 
 # **Hybrid Search Engine (Semantic + Keyword)**
 
-
-# Hybrid Search Engine (Semantic + Keyword)
-
 ## Overview
 A search system that combines keyword-based and semantic search techniques to improve information retrieval accuracy.
 
@@ -32,6 +29,9 @@ User Query → Keyword Search + Embedding → Vector Search (FAISS) → Combined
 - "Deep learning vs machine learning"
 
 
-
 ## Live Demo
  [Live Demo](https://search-engine-gen-ai-swktuihviuuxmmx3wdifas.streamlit.app/)
+
+ ## Screenshot
+ ![Screenshit](screenshot1.png)
+  ![Screenshit](screenshot2.png)
