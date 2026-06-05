@@ -5,5 +5,5 @@ langchain-groq
 streamlit
 duckduckgo-search
 wikipedia
-arxiv
+arxiv==1.4.8
 python-dotenv
