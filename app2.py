@@ -1,18 +1,24 @@
 import streamlit as st
 from dotenv import load_dotenv
-import arxiv
 
 from langchain_groq import ChatGroq
 
-from langchain_community.utilities import WikipediaAPIWrapper
-from langchain_community.tools import (
-    WikipediaQueryRun,
-    DuckDuckGoSearchRun,
+from langchain_community.utilities import (
+    WikipediaAPIWrapper,
+    ArxivAPIWrapper
 )
 
-from langchain_core.tools import tool
+from langchain_community.tools import (
+    WikipediaQueryRun,
+    ArxivQueryRun,
+    DuckDuckGoSearchRun
+)
 
-from langchain.agents import AgentExecutor, create_tool_calling_agent
+from langchain.agents import (
+    AgentExecutor,
+    create_tool_calling_agent
+)
+
 from langchain_core.prompts import ChatPromptTemplate
 from langchain.callbacks import StreamlitCallbackHandler
 
@@ -32,43 +38,13 @@ wiki = WikipediaQueryRun(
 )
 
 # -------------------------
-# Custom Arxiv Tool
+# Arxiv Tool
 # -------------------------
-@tool
-def search_arxiv(query: str) -> str:
-    """Search research papers from arXiv."""
-    
-    try:
-        client = arxiv.Client()
-
-        search = arxiv.Search(
-            query=query,
-            max_results=3
-        )
-
-        papers = []
-
-        for paper in client.results(search):
-            papers.append(
-                f"""
-Title: {paper.title}
-
-Summary: {paper.summary[:300]}
-
-Link: {paper.entry_id}
-"""
-            )
-
-        return "\n\n".join(papers)
-
-    except Exception as e:
-        return f"Arxiv Error: {e}"
-
-
-arxiv_tool = Tool(
-    name="Arxiv",
-    func=search_arxiv,
-    description="Useful for searching research papers from arXiv."
+arxiv = ArxivQueryRun(
+    api_wrapper=ArxivAPIWrapper(
+        top_k_results=3,
+        doc_content_chars_max=1000
+    )
 )
 
 # -------------------------
@@ -82,14 +58,14 @@ search = DuckDuckGoSearchRun(name="Search")
 tools = [
     search,
     wiki,
-    search_arxiv
+    arxiv
 ]
 
 # -------------------------
 # Streamlit UI
 # -------------------------
-st.title("AI Search Assistant using Agent + Tools")
-st.caption("Web Search + Wikipedia + Arxiv Papers")
+st.title("AI Search Assistant")
+st.caption("Web Search + Wikipedia + Arxiv Research Papers")
 
 api_key = st.sidebar.text_input(
     "Enter Groq API Key",
@@ -97,7 +73,7 @@ api_key = st.sidebar.text_input(
 )
 
 if not api_key:
-    st.info("Please enter your Groq API key in the sidebar.")
+    st.info("Please enter your Groq API key.")
     st.stop()
 
 # -------------------------
@@ -107,7 +83,7 @@ if "messages" not in st.session_state:
     st.session_state.messages = [
         {
             "role": "assistant",
-            "content": "Hi! I can search the web, Wikipedia, and arXiv research papers."
+            "content": "Hi! I can search the web, Wikipedia, and Arxiv research papers."
         }
     ]
 
@@ -115,7 +91,7 @@ for msg in st.session_state.messages:
     st.chat_message(msg["role"]).write(msg["content"])
 
 # -------------------------
-# User Query
+# User Input
 # -------------------------
 if prompt := st.chat_input("Ask anything..."):
 
@@ -129,7 +105,7 @@ if prompt := st.chat_input("Ask anything..."):
     st.chat_message("user").write(prompt)
 
     # -------------------------
-    # Groq LLM
+    # LLM
     # -------------------------
     llm = ChatGroq(
         groq_api_key=api_key,
@@ -147,12 +123,20 @@ if prompt := st.chat_input("Ask anything..."):
                 """
 You are a smart AI assistant.
 
-Use:
-- Web Search for current information.
-- Wikipedia for encyclopedic information.
-- Arxiv for research papers.
+You have access to:
 
-Always choose the best tool when needed.
+1. Search
+   - Use for current events, news, websites, and general web information.
+
+2. Wikipedia
+   - Use for encyclopedic facts, people, places, history, concepts.
+
+3. Arxiv
+   - Use for research papers, academic topics, machine learning, AI, deep learning,
+     healthcare prediction, scientific research, algorithms, and technical studies.
+
+Always choose the most appropriate tool.
+For research-related questions, prefer Arxiv.
 """
             ),
             ("human", "{input}"),
@@ -172,7 +156,8 @@ Always choose the best tool when needed.
     agent_executor = AgentExecutor(
         agent=agent,
         tools=tools,
-        verbose=True
+        verbose=True,
+        handle_parsing_errors=True
     )
 
     # -------------------------
@@ -183,9 +168,10 @@ Always choose the best tool when needed.
         st_cb = StreamlitCallbackHandler(st.container())
 
         try:
+
             response = agent_executor.invoke(
                 {"input": prompt},
-                {"callbacks": [st_cb]}
+                config={"callbacks": [st_cb]}
             )
 
             output = response["output"]
@@ -200,4 +186,5 @@ Always choose the best tool when needed.
             st.write(output)
 
         except Exception as e:
+
             st.error(f"Error: {str(e)}")
