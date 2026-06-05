@@ -10,7 +10,7 @@ from langchain_community.tools import (
     DuckDuckGoSearchRun,
 )
 
-from langchain.tools import Tool
+from langchain_core.tools import tool
 
 from langchain.agents import AgentExecutor, create_tool_calling_agent
 from langchain_core.prompts import ChatPromptTemplate
@@ -34,14 +34,16 @@ wiki = WikipediaQueryRun(
 # -------------------------
 # Custom Arxiv Tool
 # -------------------------
+@tool
 def search_arxiv(query: str) -> str:
+    """Search research papers from arXiv."""
+    
     try:
         client = arxiv.Client()
 
         search = arxiv.Search(
             query=query,
-            max_results=3,
-            sort_by=arxiv.SortCriterion.Relevance
+            max_results=3
         )
 
         papers = []
@@ -51,23 +53,16 @@ def search_arxiv(query: str) -> str:
                 f"""
 Title: {paper.title}
 
-Authors: {", ".join(author.name for author in paper.authors)}
-
-Published: {paper.published.date()}
-
-Summary: {paper.summary[:500]}
+Summary: {paper.summary[:300]}
 
 Link: {paper.entry_id}
 """
             )
 
-        if not papers:
-            return "No papers found."
-
         return "\n\n".join(papers)
 
     except Exception as e:
-        return f"Arxiv Error: {str(e)}"
+        return f"Arxiv Error: {e}"
 
 
 arxiv_tool = Tool(
@@ -87,7 +82,7 @@ search = DuckDuckGoSearchRun(name="Search")
 tools = [
     search,
     wiki,
-    arxiv_tool
+    search_arxiv
 ]
 
 # -------------------------
