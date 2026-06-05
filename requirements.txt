@@ -1,9 +1,9 @@
-langchain==0.2.12
-langchain-core==0.2.32
-langchain-community==0.2.10
-langchain-groq
+langchain==0.3.26
+langchain-community==0.3.27
+arxiv==1.4.8
+feedparser==6.0.11
 streamlit
+langchain-groq
 duckduckgo-search
 wikipedia
-arxiv==1.4.8
 python-dotenv
