@@ -13,10 +13,10 @@ import wikipedia
 from langchain_groq import ChatGroq
 from langchain_community.utilities import WikipediaAPIWrapper, PubMedAPIWrapper
 from langchain_community.tools import WikipediaQueryRun, DuckDuckGoSearchRun
-from langchain_core.tools import Tool                     # Fix: correct import path for newer LangChain
+from langchain_core.tools import Tool                     
 from langchain.agents import AgentExecutor, create_tool_calling_agent
 from langchain_core.prompts import ChatPromptTemplate
-from langchain.callbacks import StreamlitCallbackHandler
+from langchain_community.callbacks.streamlit import StreamlitCallbackHandler
 
 # ── Fix: Wikipedia blocks requests without a proper User-Agent ───────────────
 wikipedia.set_user_agent("AISearchAssistant/1.0 (contact@example.com)")
