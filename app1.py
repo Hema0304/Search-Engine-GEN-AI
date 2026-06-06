@@ -13,7 +13,7 @@ import wikipedia
 from langchain_groq import ChatGroq
 from langchain_community.utilities import WikipediaAPIWrapper, PubMedAPIWrapper
 from langchain_community.tools import WikipediaQueryRun, DuckDuckGoSearchRun
-from langchain.tools import Tool                          # Fix: wrap PubMed in plain Tool
+from langchain_core.tools import Tool                     # Fix: correct import path for newer LangChain
 from langchain.agents import AgentExecutor, create_tool_calling_agent
 from langchain_core.prompts import ChatPromptTemplate
 from langchain.callbacks import StreamlitCallbackHandler
@@ -24,15 +24,15 @@ wikipedia.set_user_agent("AISearchAssistant/1.0 (contact@example.com)")
 # ── Page config ───────────────────────────────────────────────────────────────
 st.set_page_config(
     page_title="AI Search Assistant",
-    
+    page_icon="🔬",
     layout="centered"
 )
 
-st.title(" AI Search Assistant")
+st.title("🔬 AI Search Assistant")
 
 
 # ── Sidebar ───────────────────────────────────────────────────────────────────
-st.sidebar.header(" Configuration")
+st.sidebar.header("Configuration")
 api_key = st.sidebar.text_input("Groq API Key", type="password", placeholder="gsk_...")
 st.sidebar.markdown("---")
 st.sidebar.markdown("**Active Tools**")
@@ -56,13 +56,13 @@ search_tool = DuckDuckGoSearchRun(
 # Tool 2: PubMed — wrapped in plain Tool to fix CallbackManagerForToolRun
 # serialization error that occurs with PubmedQueryRun directly
 _pubmed_wrapper = PubMedAPIWrapper(
-    top_k_results=2,            # fetch top 2 papers
-    doc_content_chars_max=500   # keep responses concise
+    top_k_results=2,
+    doc_content_chars_max=500
 )
 
 pubmed_tool = Tool(
     name="PubMed_Search",
-    func=lambda query: _pubmed_wrapper.run(query),   # plain callable, no run_manager passed
+    func=lambda query: _pubmed_wrapper.run(query),
     description=(
         "Search PubMed for peer-reviewed medical and scientific research papers. "
         "Use this for health, biology, medicine, clinical trials, and science topics."
@@ -90,7 +90,7 @@ if "messages" not in st.session_state:
             "role": "assistant",
             "content": (
                 "👋 Hi! I'm your AI research assistant.\n\n"
-                
+        
                 "Ask me anything!"
             )
         }
@@ -104,7 +104,7 @@ for msg in st.session_state.messages:
 if prompt := st.chat_input("Ask anything..."):
 
     if not api_key:
-        st.warning(" Please enter your Groq API key in the sidebar.")
+        st.warning("⚠️ Please enter your Groq API key in the sidebar.")
         st.stop()
 
     st.session_state.messages.append({"role": "user", "content": prompt})
@@ -143,8 +143,8 @@ Always cite your sources clearly in the final answer."""
         agent=agent,
         tools=tools,
         verbose=True,
-        handle_parsing_errors=True,   # gracefully handle malformed LLM output
-        max_iterations=5              # prevent infinite loops
+        handle_parsing_errors=True,
+        max_iterations=5
     )
 
     # ── Run and stream response ───────────────────────────────────────────────
@@ -158,7 +158,7 @@ Always cite your sources clearly in the final answer."""
             output = response["output"]
         except Exception as e:
             output = (
-                f" Something went wrong: {str(e)}\n\n"
+                f"⚠️ Something went wrong: {str(e)}\n\n"
                 "Please try again or rephrase your question."
             )
 
