@@ -31,7 +31,8 @@ if not api_key:
 llm = ChatGroq(
     groq_api_key=api_key.strip(),
     model_name="llama-3.1-8b-instant",
-    temperature=0.2
+    temperature=0.2,
+    max_tokens=500
 )
 # -----------------------
 # TOOLS
@@ -91,7 +92,8 @@ if query:
     st.chat_message("user").write(query)
 
     with st.chat_message("assistant"):
-        result = agent.run(query)
+        result = agent.invoke({"input": query})
+        answer = result.get("output", "Sorry, no response generated.")
 
         st.session_state.messages.append(
             {"role": "assistant", "content": result}
