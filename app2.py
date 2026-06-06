@@ -5,14 +5,10 @@ from dotenv import load_dotenv
 from langchain_groq import ChatGroq
 
 from langchain_community.utilities import WikipediaAPIWrapper, ArxivAPIWrapper
-from langchain_community.tools import (
-    DuckDuckGoSearchRun,
-    WikipediaQueryRun,
-    ArxivQueryRun
-)
-from langchain.agents import initialize_agent, AgentType, Tool
-from langchain_core.prompts import ChatPromptTemplate
-from langchain.callbacks import StreamlitCallbackHandler
+from langchain_community.tools import DuckDuckGoSearchRun, WikipediaQueryRun, ArxivQueryRun
+
+from langchain.agents import initialize_agent, AgentType
+from langchain.tools import Tool
 
 # -----------------------
 # ENV
