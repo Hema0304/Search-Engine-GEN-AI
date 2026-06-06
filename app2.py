@@ -4,24 +4,19 @@ from dotenv import load_dotenv
 
 from langchain_groq import ChatGroq
 
-from langchain_community.utilities import ArxivAPIWrapper, WikipediaAPIWrapper
-from langchain_community.tools import (
-    ArxivQueryRun,
-    WikipediaQueryRun,
-    DuckDuckGoSearchRun
-)
+from langchain_community.utilities import WikipediaAPIWrapper, ArxivAPIWrapper
+from langchain_community.tools import DuckDuckGoSearchRun, WikipediaQueryRun, ArxivQueryRun
 
-from langchain.agents import AgentExecutor, create_tool_calling_agent
-from langchain_core.prompts import ChatPromptTemplate
-from langchain.callbacks import StreamlitCallbackHandler
+from langchain.agents import initialize_agent, AgentType
+from langchain.tools import Tool
 
 # ----------------------------
-# LOAD ENV
+# ENV
 # ----------------------------
 load_dotenv()
 
-st.set_page_config(page_title="AI Search Assistant", layout="wide")
-st.title("🔎 AI Search Assistant (Groq + Tools)")
+st.set_page_config(page_title="AI Search Assistant")
+st.title("🔎 AI Search Assistant (Stable Version)")
 
 # ----------------------------
 # API KEY
@@ -29,7 +24,6 @@ st.title("🔎 AI Search Assistant (Groq + Tools)")
 api_key = st.sidebar.text_input("Enter Groq API Key", type="password")
 
 if not api_key:
-    st.warning("Please enter Groq API key")
     st.stop()
 
 # ----------------------------
@@ -43,40 +37,23 @@ llm = ChatGroq(
 # ----------------------------
 # TOOLS
 # ----------------------------
-wiki_tool = WikipediaQueryRun(
-    api_wrapper=WikipediaAPIWrapper(top_k_results=1, doc_content_chars_max=500)
-)
+wiki = WikipediaQueryRun(api_wrapper=WikipediaAPIWrapper())
+arxiv = ArxivQueryRun(api_wrapper=ArxivAPIWrapper())
+search = DuckDuckGoSearchRun()
 
-arxiv_tool = ArxivQueryRun(
-    api_wrapper=ArxivAPIWrapper(top_k_results=1, doc_content_chars_max=500)
-)
-
-search_tool = DuckDuckGoSearchRun(name="web_search")
-
-tools = [search_tool, wiki_tool, arxiv_tool]
+tools = [
+    Tool(name="Web Search", func=search.run, description="Use for latest info"),
+    Tool(name="Wikipedia", func=wiki.run, description="Use for definitions and concepts"),
+    Tool(name="Arxiv", func=arxiv.run, description="Use for research papers")
+]
 
 # ----------------------------
-# PROMPT (IMPORTANT FOR TOOL AGENT)
+# AGENT (STABLE)
 # ----------------------------
-prompt = ChatPromptTemplate.from_messages([
-    ("system",
-     "You are a smart AI assistant. "
-     "Use tools when required:\n"
-     "- Web search for latest info\n"
-     "- Wikipedia for concepts\n"
-     "- Arxiv for research papers"),
-    ("human", "{input}"),
-    ("placeholder", "{agent_scratchpad}")
-])
-
-# ----------------------------
-# AGENT
-# ----------------------------
-agent = create_tool_calling_agent(llm, tools, prompt)
-
-agent_executor = AgentExecutor(
-    agent=agent,
+agent = initialize_agent(
     tools=tools,
+    llm=llm,
+    agent=AgentType.ZERO_SHOT_REACT_DESCRIPTION,
     verbose=True,
     handle_parsing_errors=True
 )
@@ -86,14 +63,14 @@ agent_executor = AgentExecutor(
 # ----------------------------
 if "messages" not in st.session_state:
     st.session_state.messages = [
-        {"role": "assistant", "content": "Hi! I can search web, Wikipedia, and Arxiv papers."}
+        {"role": "assistant", "content": "Hi! Ask me anything."}
     ]
 
 for msg in st.session_state.messages:
     st.chat_message(msg["role"]).write(msg["content"])
 
 # ----------------------------
-# USER INPUT
+# INPUT
 # ----------------------------
 query = st.chat_input("Ask anything...")
 
@@ -102,17 +79,10 @@ if query:
     st.chat_message("user").write(query)
 
     with st.chat_message("assistant"):
-        st_cb = StreamlitCallbackHandler(st.container())
-
-        response = agent_executor.invoke(
-            {"input": query},
-            {"callbacks": [st_cb]}
-        )
-
-        output = response["output"]
+        response = agent.run(query)
 
         st.session_state.messages.append(
-            {"role": "assistant", "content": output}
+            {"role": "assistant", "content": response}
         )
 
-        st.write(output)
+        st.write(response)
