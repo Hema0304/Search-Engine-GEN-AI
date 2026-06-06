@@ -10,8 +10,7 @@ from langchain_community.tools import (
     WikipediaQueryRun,
     ArxivQueryRun
 )
-
-from langchain.agents import AgentExecutor, create_tool_calling_agent
+from langchain.agents import initialize_agent, AgentType, Tool
 from langchain_core.prompts import ChatPromptTemplate
 from langchain.callbacks import StreamlitCallbackHandler
 
@@ -72,14 +71,80 @@ prompt = ChatPromptTemplate.from_messages([
 # -----------------------
 # AGENT
 # -----------------------
-agent = create_tool_calling_agent(llm, tools, prompt)
 
-agent_executor = AgentExecutor(
-    agent=agent,
+# -----------------------------
+# 1. WRAP TOOLS (same as before)
+# -----------------------------
+tools = [
+    Tool(
+        name="Web Search",
+        func=search_tool.run,
+        description=(
+            "Use ONLY for real-time or general questions such as: "
+            "latest news, current events, trending topics, product info, tutorials, or unknown queries."
+        )
+    ),
+    Tool(
+        name="Wikipedia",
+        func=wiki_tool.run,
+        description=(
+            "Use ONLY for factual, encyclopedic knowledge such as: "
+            "history, definitions, concepts, places, people, and background explanations."
+        )
+    ),
+    Tool(
+        name="Arxiv Research",
+        func=arxiv_tool.run,
+        description=(
+            "Use ONLY for research-level questions such as: "
+            "machine learning papers, AI models, algorithms, scientific studies, and technical innovations."
+        )
+    )
+]
+
+# -----------------------------
+# 2. SMART SYSTEM INSTRUCTION
+# -----------------------------
+SYSTEM_PREFIX = """
+You are an advanced AI Search Assistant.
+
+You MUST follow these rules:
+
+1. FIRST understand the user intent:
+   - If the question is about NEWS, CURRENT EVENTS → use Web Search
+   - If the question is about DEFINITIONS, HISTORY, GENERAL KNOWLEDGE → use Wikipedia
+   - If the question is about RESEARCH PAPERS, AI, ML, SCIENCE → use Arxiv Research
+
+2. If you are unsure → prefer Web Search.
+
+3. NEVER guess answers without tools when factual accuracy is needed.
+
+4. Always give:
+   - Clear explanation
+   - Structured answer (bullet points if needed)
+   - Simple language
+
+5. If multiple tools are needed:
+   - Combine results and summarize clearly
+
+6. Be concise but informative.
+"""
+
+# -----------------------------
+# 3. AGENT INITIALIZATION
+# -----------------------------
+agent_executor = initialize_agent(
     tools=tools,
-    verbose=True
+    llm=llm,
+    agent=AgentType.ZERO_SHOT_REACT_DESCRIPTION,
+    verbose=True,
+    handle_parsing_errors=True,
+    max_iterations=5,
+    early_stopping_method="generate",
+    agent_kwargs={
+        "prefix": SYSTEM_PREFIX
+    }
 )
-
 # -----------------------
 # SESSION MEMORY
 # -----------------------
