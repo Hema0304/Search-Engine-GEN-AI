@@ -1,8 +1,9 @@
-streamlit 
-langchain 
-langchain-community
-langchain-groq 
-python-dotenv 
-duckduckgo-search 
-wikipedia 
+streamlit
+langchain>=0.2.0
+langchain-core>=0.2.0
+langchain-community>=0.2.0
+langchain-groq
+duckduckgo-search
+wikipedia
 arxiv
+python-dotenv
