@@ -8,4 +8,4 @@ langchain-groq
 
 duckduckgo-search
 wikipedia
-arxiv
+arxiv==1.4.7
