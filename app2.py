@@ -1,13 +1,13 @@
 import streamlit as st
 from dotenv import load_dotenv
+import os
 
 from langchain_groq import ChatGroq
 
 from langchain_community.utilities import WikipediaAPIWrapper, ArxivAPIWrapper
 from langchain_community.tools import DuckDuckGoSearchRun, WikipediaQueryRun, ArxivQueryRun
 
-from langchain_core.prompts import ChatPromptTemplate
-from langchain.agents import AgentExecutor, create_tool_calling_agent
+from langchain.agents import initialize_agent, Tool, AgentType
 
 # -----------------------
 # ENV
@@ -46,33 +46,37 @@ arxiv = ArxivQueryRun(
 
 search = DuckDuckGoSearchRun()
 
-tools = [search, wiki, arxiv]
+tools = [
+    Tool(
+        name="Web Search",
+        func=search.run,
+        description="Useful for real-time web search"
+    ),
+    Tool(
+        name="Wikipedia",
+        func=wiki.run,
+        description="Useful for general knowledge from Wikipedia"
+    ),
+    Tool(
+        name="Arxiv",
+        func=arxiv.run,
+        description="Useful for scientific research papers"
+    )
+]
 
 # -----------------------
-# PROMPT (CRITICAL)
+# AGENT (STABLE VERSION)
 # -----------------------
-prompt = ChatPromptTemplate.from_messages([
-    ("system",
-     "You are a helpful AI assistant. "
-     "Use tools when needed: web search, wikipedia, arxiv."),
-    ("human", "{input}"),
-    ("placeholder", "{agent_scratchpad}")
-])
-
-# -----------------------
-# AGENT (MODERN LCEL)
-# -----------------------
-agent = create_tool_calling_agent(llm, tools, prompt)
-
-agent_executor = AgentExecutor(
-    agent=agent,
+agent = initialize_agent(
     tools=tools,
+    llm=llm,
+    agent=AgentType.ZERO_SHOT_REACT_DESCRIPTION,
     verbose=True,
     handle_parsing_errors=True
 )
 
 # -----------------------
-# CHAT UI
+# CHAT MEMORY
 # -----------------------
 if "messages" not in st.session_state:
     st.session_state.messages = []
@@ -87,11 +91,10 @@ if query:
     st.chat_message("user").write(query)
 
     with st.chat_message("assistant"):
-        result = agent_executor.invoke({"input": query})
-        answer = result["output"]
+        result = agent.run(query)
 
         st.session_state.messages.append(
-            {"role": "assistant", "content": answer}
+            {"role": "assistant", "content": result}
         )
 
-        st.write(answer)
+        st.write(result)
