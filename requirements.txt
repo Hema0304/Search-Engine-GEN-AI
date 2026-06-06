@@ -1,3 +1,4 @@
+<<<<<<< Updated upstream
 streamlit
 python-dotenv
 
@@ -9,3 +10,26 @@ langchain-groq
 duckduckgo-search
 wikipedia
 arxiv==1.4.7
+=======
+streamlit==1.36.0
+
+langchain==0.2.16
+langchain-core==0.2.38
+langchain-community==0.2.16
+langchain-groq
+
+# LLM backend
+groq
+
+# Tools
+duckduckgo-search
+wikipedia
+arxiv
+
+# Environment variables
+python-dotenv
+
+# IMPORTANT: LangChain 0.2.x requires Pydantic v2
+pydantic==1.10.13
+
+>>>>>>> Stashed changes
