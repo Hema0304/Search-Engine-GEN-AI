@@ -1,9 +1,11 @@
 streamlit
-langchain==0.2.11
-langchain-core==0.2.11
-langchain-community==0.2.11
+
+langchain
+langchain-community
 langchain-groq
+
 duckduckgo-search
 wikipedia
 arxiv
+
 python-dotenv
