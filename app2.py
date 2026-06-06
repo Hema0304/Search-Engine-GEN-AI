@@ -29,10 +29,10 @@ if not api_key:
 # LLM
 # -----------------------
 llm = ChatGroq(
-    groq_api_key=api_key,
-    model_name="llama3-8b-8192"
+    groq_api_key=api_key.strip(),
+    model_name="llama-3.1-8b-instant",
+    temperature=0.2
 )
-
 # -----------------------
 # TOOLS
 # -----------------------
