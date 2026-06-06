@@ -1,190 +1,118 @@
 import streamlit as st
+import os
 from dotenv import load_dotenv
 
 from langchain_groq import ChatGroq
 
-from langchain_community.utilities import (
-    WikipediaAPIWrapper,
-    ArxivAPIWrapper
-)
-
+from langchain_community.utilities import WikipediaAPIWrapper, ArxivAPIWrapper
 from langchain_community.tools import (
+    DuckDuckGoSearchRun,
     WikipediaQueryRun,
-    ArxivQueryRun,
-    DuckDuckGoSearchRun
+    ArxivQueryRun
 )
 
-from langchain.agents import (
-    AgentExecutor,
-    create_tool_calling_agent
-)
-
+from langchain.agents import AgentExecutor, create_tool_calling_agent
 from langchain_core.prompts import ChatPromptTemplate
 from langchain.callbacks import StreamlitCallbackHandler
 
-# -------------------------
-# Load Environment Variables
-# -------------------------
+# -----------------------
+# ENV
+# -----------------------
 load_dotenv()
 
-# -------------------------
-# Wikipedia Tool
-# -------------------------
-wiki = WikipediaQueryRun(
-    api_wrapper=WikipediaAPIWrapper(
-        top_k_results=1,
-        doc_content_chars_max=500
-    )
-)
+st.set_page_config(page_title="AI Search Assistant", layout="wide")
 
-# -------------------------
-# Arxiv Tool
-# -------------------------
-arxiv = ArxivQueryRun(
-    api_wrapper=ArxivAPIWrapper(
-        top_k_results=3,
-        doc_content_chars_max=1000
-    )
-)
+st.title("🔎 AI Search Assistant (Groq + Tools + Agent)")
 
-# -------------------------
-# DuckDuckGo Search Tool
-# -------------------------
-search = DuckDuckGoSearchRun(name="Search")
-
-# -------------------------
-# Tool List
-# -------------------------
-tools = [
-    search,
-    wiki,
-    arxiv
-]
-
-# -------------------------
-# Streamlit UI
-# -------------------------
-st.title("AI Search Assistant")
-st.caption("Web Search + Wikipedia + Arxiv Research Papers")
-
-api_key = st.sidebar.text_input(
-    "Enter Groq API Key",
-    type="password"
-)
+# -----------------------
+# SIDEBAR API KEY
+# -----------------------
+api_key = st.sidebar.text_input("Enter Groq API Key", type="password")
 
 if not api_key:
-    st.info("Please enter your Groq API key.")
+    st.warning("Please enter your Groq API key to continue.")
     st.stop()
 
-# -------------------------
-# Chat Memory
-# -------------------------
+# -----------------------
+# TOOLS SETUP
+# -----------------------
+
+wiki_tool = WikipediaQueryRun(
+    api_wrapper=WikipediaAPIWrapper(top_k_results=1, doc_content_chars_max=500)
+)
+
+arxiv_tool = ArxivQueryRun(
+    api_wrapper=ArxivAPIWrapper(top_k_results=1, doc_content_chars_max=500)
+)
+
+search_tool = DuckDuckGoSearchRun(name="web_search")
+
+tools = [search_tool, wiki_tool, arxiv_tool]
+
+# -----------------------
+# LLM (Groq)
+# -----------------------
+llm = ChatGroq(
+    groq_api_key=api_key,
+    model_name="llama3-8b-8192",
+    streaming=True
+)
+
+# -----------------------
+# PROMPT
+# -----------------------
+prompt = ChatPromptTemplate.from_messages([
+    ("system",
+     "You are an intelligent assistant. "
+     "Use tools (web search, wikipedia, arxiv) whenever needed."),
+    ("human", "{input}"),
+    ("placeholder", "{agent_scratchpad}")
+])
+
+# -----------------------
+# AGENT
+# -----------------------
+agent = create_tool_calling_agent(llm, tools, prompt)
+
+agent_executor = AgentExecutor(
+    agent=agent,
+    tools=tools,
+    verbose=True
+)
+
+# -----------------------
+# SESSION MEMORY
+# -----------------------
 if "messages" not in st.session_state:
     st.session_state.messages = [
-        {
-            "role": "assistant",
-            "content": "Hi! I can search the web, Wikipedia, and Arxiv research papers."
-        }
+        {"role": "assistant", "content": "Hi! I can search web, Wikipedia, and research papers. Ask me anything."}
     ]
 
+# show chat history
 for msg in st.session_state.messages:
     st.chat_message(msg["role"]).write(msg["content"])
 
-# -------------------------
-# User Input
-# -------------------------
-if prompt := st.chat_input("Ask anything..."):
+# -----------------------
+# USER INPUT
+# -----------------------
+user_input = st.chat_input("Ask anything...")
 
-    st.session_state.messages.append(
-        {
-            "role": "user",
-            "content": prompt
-        }
-    )
+if user_input:
+    st.session_state.messages.append({"role": "user", "content": user_input})
+    st.chat_message("user").write(user_input)
 
-    st.chat_message("user").write(prompt)
-
-    # -------------------------
-    # LLM
-    # -------------------------
-    llm = ChatGroq(
-        groq_api_key=api_key,
-        model_name="qwen/qwen3-32b",
-        streaming=False
-    )
-
-    # -------------------------
-    # Prompt
-    # -------------------------
-    prompt_template = ChatPromptTemplate.from_messages(
-        [
-            (
-                "system",
-                """
-You are a smart AI assistant.
-
-You have access to:
-
-1. Search
-   - Use for current events, news, websites, and general web information.
-
-2. Wikipedia
-   - Use for encyclopedic facts, people, places, history, concepts.
-
-3. Arxiv
-   - Use for research papers, academic topics, machine learning, AI, deep learning,
-     healthcare prediction, scientific research, algorithms, and technical studies.
-
-Always choose the most appropriate tool.
-For research-related questions, prefer Arxiv.
-"""
-            ),
-            ("human", "{input}"),
-            ("placeholder", "{agent_scratchpad}")
-        ]
-    )
-
-    # -------------------------
-    # Agent
-    # -------------------------
-    agent = create_tool_calling_agent(
-        llm,
-        tools,
-        prompt_template
-    )
-
-    agent_executor = AgentExecutor(
-        agent=agent,
-        tools=tools,
-        verbose=True,
-        handle_parsing_errors=True
-    )
-
-    # -------------------------
-    # Response
-    # -------------------------
     with st.chat_message("assistant"):
+        callback = StreamlitCallbackHandler(st.container())
 
-        st_cb = StreamlitCallbackHandler(st.container())
+        result = agent_executor.invoke(
+            {"input": user_input},
+            {"callbacks": [callback]}
+        )
 
-        try:
+        answer = result["output"]
 
-            response = agent_executor.invoke(
-                {"input": prompt},
-                config={"callbacks": [st_cb]}
-            )
+        st.session_state.messages.append(
+            {"role": "assistant", "content": answer}
+        )
 
-            output = response["output"]
-
-            st.session_state.messages.append(
-                {
-                    "role": "assistant",
-                    "content": output
-                }
-            )
-
-            st.write(output)
-
-        except Exception as e:
-
-            st.error(f"Error: {str(e)}")
+        st.write(answer)
